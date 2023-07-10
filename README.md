@@ -4,7 +4,9 @@ USB-serial driver https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drive
 
 To update the firmware, you will need a
 
-USB to Serial Converter(PR55-68 or any USB to serial) Windows PC Board name PR55-72 Note: if the file name has any special char, please remove it
+USB to Serial Converter(PR55-68 or any USB to serial) Windows PC 
+
+Note: if the file name has any special char, please remove it
 
 How to put in program mode
 
