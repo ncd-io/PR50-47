@@ -1,0 +1,88 @@
+PR50-47 test
+Case one -- 
+Periodic Data transmission
+7E 00 2F 90 00 13 A2 00 41 E3 4A C9 FF FE C2 7F 00 07 03 FF 01 01 F4 00 32 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 11
+Payload -- 7F 00 07 03 FF 01 01 F4 00 32 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00
+7F -- Header
+00 -- Node ID
+07 -- Firmware version
+03,FF -- Battery Life
+01 -- Packet Counter
+01,F4 -- Sensors type
+01 -- Message Type
+32 -- IO status --X X X X X X IO2 IO1  ( IO1 is opto IO, when 24V is applied IO1 will set and when its removed it will go to Zero) ) 
+By default io are general purpose pulled high so all IO are coming as high
+00 00 00 00 -- Reserved Current in mA channel 1
+00 00 00 00 -- Reserved Current in mA channel 2
+00 00 00 00 -- Reserved Current in mA channel 3
+03 or FF -- Reserve / Modbus Error 
+00,00,00,00 -- Energy 1
+00,00,00,00 -- Energy 2
+00,00 -- Counter 1
+00,00 -- Counter 2
+
+
+Case 2 --
+When IO status changes
+7E 00 16 90 00 13 A2 00 41 E3 4A C9 FF FE C2 7F 00 07 03 FF 0F 01 F4 02 30 06
+
+Payload -- 7F 00 07 03 FF 0F 01 F4 02 30
+7F -- Header
+00 -- Node ID
+07 -- Firmware version
+03,FF -- Battery Life
+0F -- Packet Counter
+01,F4 -- Sensors type
+02 -- Message Type
+30 -- IO status ----X X X X X X IO2 IO1 ( IO1 is opto IO)  30 binary value will be XXXX0000
+This indicates that IO2 was pulled low
+
+
+
+
+Case 3 -- RS485 comm
+This will have two case
+A. data from wireless side to PR50-23
+Sample packet from PC side
+7E 00 18 10 01 00 13 A2 00 41 B1 B0 13 FF FE 00 00 F4 4D 00 00 00 12 81 28 85 55 B1
+7E -- Header
+00,18 -- Packet length
+Destination Address -- 00 13 A2 00 41 B1 B0 13
+F4 -- Command Type
+4D -- Sub command 
+00,00,00 -- Reserve  --- These 5 bytes will always be there F4 4D 00 00 00
+12 81 28 85 55 -- RS485 data. this is the data which will show up on RS485 
+
+On the RS485 the data will looks like this 
+12 81 28 85 55
+
+B. once the RS485 device gets a packet it will respond
+The response will be received the the wireless modem connected to PC or RPI
+and the wireless message will look something like this
+7E 00 1A 90 00 13 A2 00 41 B1 B0 13 FF FE C2 7F 00 01 03 FF 2C 01 F4 05 68 65 6C 6C 6F 8A
+Payload -- 7F 00 01 03 FF 2C 01 F4 05 68 65 6C 6C 6F
+7F -- Header
+00 -- Node ID
+01 -- Firmware version
+03,FF -- Battery Life
+2C -- Packet Counter
+01,F4 -- Sensors type
+05 -- Message Type
+68 65 6C 6C -- RS485 data
+
+
+case 4 -- pulse duarion 
+7E 00 1E 90 00 13 A2 00 41 E3 4A C9 FF FE C2 7F 00 07 03 FF 26 01 F4 06 32 00 00 01 38 00 0D EE D0 E5
+7F 00 07 03 FF 26 01 F4 06 32 00 00 01 38 00 0D EE D0
+7F -- Header 
+00 -- Node ID
+01 -- Firmware version
+03,FF -- Battery Life
+68 -- Packet Counter
+01,F4 -- Sensors type
+06 -- Message Type
+32 -- IO status --X X X X X X IO2 IO1 ( IO1 is opto IO)
+00 00 01 38 -- pulse high
+00 0D EE D0 -- pulse low 
+
+
