@@ -22,3 +22,6 @@ Press and release the RST button
 
 Once the firmware update is finished, the device will reboot
 
+command to use serial python update tool --
+
+python ncd_py_bootloader_v2.py COM3 ./Upgrade.ncd 240
