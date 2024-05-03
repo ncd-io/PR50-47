@@ -1,7 +1,7 @@
 # Syntax 
 # $ python xbee_fota.py <com port> <ncd update file> <PAN ID> <MAC Address> <Chunk size multiple of 16> <FLY Wait 1, No FLY Wait 0>
 # Example: 
-# $ python xbee_fota.py COM19 ./Update.ncd 7FFF 41 AF 38 CC 128 1
+# $ python xbee_fota.py COM4 ./Upgrade.ncd 7FFF 41 AF 38 CC 128 1
 from pyxbee_lib import xbee 
 import sys 
 import time
@@ -10,6 +10,7 @@ FOTA_CMD_HDR=0xF5
 COMM_CMD_HDR=0xF7
 START_FOTA_MODE_CMD_ID=0x38
 END_FOTA_MODE_CMD_ID=0x39
+READ_CURRENT_MANIFEST_CMD_ID=0x3C
 PGM_FOTA_MANIFEST_CMD_ID=0x3A
 PGM_FOTA_MEMORY_CMD_ID=0x3B
 READ_FOTA_MANIFEST_CMD_ID=0x3C
@@ -148,6 +149,24 @@ def send_pgm_pkt(address, xbee_obj, pkt_offset, pkt):
             print("Retrying Pgm Pkt")
     return ret
 
+def read_current_mainfest(address, xbee_obj):
+    cmd = []
+    payload = []
+    source_address = []
+    cmd.append(FOTA_CMD_HDR)
+    cmd.append(READ_CURRENT_MANIFEST_CMD_ID)
+    cmd.append(0x00)
+    cmd.append(0x00)
+    cmd.append(0x00)
+    [ret, source_address, payload] = xbee_obj.xbee_tx_packet(address, cmd)
+    if 0 != len(payload):
+        [ret, status, param] = resp_packet_decoder(address, source_address, payload)
+    elif True == ret:
+        [ret, status, param] = receive_cmd_response(address)
+        if 0xFF != status:
+            ret = False 
+    return [ret, param]
+
 def send_store_manifest(address, xbee_obj, manifest):
     cmd = []
     payload = []
@@ -184,7 +203,7 @@ pan_id = int(sys.argv[3], 16) # PAN ID
 address = [int(sys.argv[4], 16), int(sys.argv[5], 16), int(sys.argv[6], 16), int(sys.argv[7], 16)]
 chunk_size = int(sys.argv[8]) # Chunk Size
 fly_wait = int(sys.argv[9]) # Chunk Size
-
+new_fw_ver = int(0)
 #Start Xbee interface
 xbee_obj = xbee(com_port)
 xbee_obj.xbee_uart_init()
@@ -196,7 +215,7 @@ if (chunk_size % 16 == 0):
         #Extract manifest
         manifest_length = (fw_update[1] << 24) + (fw_update[2] << 16) + (fw_update[3] << 8) + fw_update[4]
         manifest = fw_update[5 : 5 + manifest_length]
-
+        new_fw_ver = manifest[0]
         #Extract Image
         image_offset = 5 + manifest_length
         if 0x02 == fw_update[image_offset]:
@@ -215,10 +234,20 @@ if (chunk_size % 16 == 0):
 					    # Wait fly
                         print("Waiting FLY")
                         wait_fly_pkt(address, xbee_obj)
-			
+                    [ret, curr_manifest] = read_current_mainfest(address, xbee_obj)
+                    print("ret", ret)
+                    print(curr_manifest)
+                    if True == ret:
+                        curr_fw_ver = curr_manifest[0]
+                        if curr_fw_ver == new_fw_ver:
+                            ret = False
+                            print("Error CAN'T UPDATE TO SAME FW VERSION!")
+                            break
+                    
                     #Send Start FOTA CMD
-                    print("Starting FOTA")
-                    ret = send_start_fota(address, xbee_obj)
+                    if True == ret:
+                        print("Starting FOTA")
+                        ret = send_start_fota(address, xbee_obj)
                     if True == ret:
                         print("FOTA Started")
                         ret = xbee_obj.xbee_set_pan_id(FOTA_MODE_PAN_ID)
@@ -235,6 +264,8 @@ if (chunk_size % 16 == 0):
                         if 0 == last_offset: # Program Manifest
                             print("Storing Manifest")
                             time.sleep(1)
+                            curr_manifest_bytes = bytes(curr_manifest)
+                            manifest = manifest[:29] + curr_manifest_bytes[29:manifest_length]
                             ret = send_store_manifest(address, xbee_obj, manifest)
                     
                     if True == ret: 
